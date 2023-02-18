@@ -118,11 +118,21 @@ class SetupMac {
                                           ${moduleArgument} \
                                           --childModules `;
 
-    // Ignoring return code because the log seems to overflow the internal buffer which triggers
-    // a false error
-    const errorCode = await exec(command, undefined, { silent, ignoreReturnCode: true });
-    if (errorCode) {
-      throw new Error(`There was an error installing the Unity Editor. See logs above for details.`);
+    for (let retry = 0; retry < 3; retry++) {
+      const result = await getExecOutput(command, undefined, { silent, ignoreReturnCode: true });
+
+      if (result.exitCode !== 0 || !result.stdout.includes("All Tasks Completed Successfully")) {
+        if (result.stdout.includes("read ETIMEDOUT")) {
+          const delay = 5 ^ (retry + 1);
+          console.warn(`Unity Editor installation failed due to a connection issue, retrying in ${delay} seconds`);
+          await new Promise(resolve => setTimeout(resolve, delay * 1000));
+          continue;
+        }
+
+        throw new Error(`There was an error installing the Unity Editor. See logs above for details.`);
+      }
+
+      break;
     }
 
     if (buildParameters.cacheUnityInstallationOnMac) {

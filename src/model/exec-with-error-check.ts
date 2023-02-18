@@ -13,12 +13,18 @@ export async function execWithErrorCheck(
   if (match) {
     const buildResults = match[1];
     const errorMatch = buildResults.match(/^Errors:\s*(\d+)$/m);
-    if (errorMatch && Number.parseInt(errorMatch[1], 10) !== 0) {
-      throw new Error(`There was an error building the project. Please read the logs for details.`);
+    if (errorMatch) {
+      const errors = Number.parseInt(errorMatch[1], 10);
+      if (errors > 0) {
+        console.warn(`There were ${errors} errors during the build. Please read the logs for details.`)
+      }
     }
-  } else {
+  }
+
+  if (!result.stdout.includes("Build succeeded!")) {
     throw new Error(`There was an error building the project. Please read the logs for details.`);
   }
 
+  console.log("Unity build finished successfully");
   return result.exitCode;
 }
